@@ -7,7 +7,6 @@ data class Question(
     val options: List<String>,
     val answer: String
 ) {
-    // Adapter for old code that expects english, thai, correctIndex
     val english get() = word
     val thai get() = translation
     val correctIndex get() = options.indexOf(answer)
@@ -33,4 +32,22 @@ data class PlayerStats(
     val wordsLearned: Int = 128,
     val totalScore: Int = 15400,
     val linguamonCollected: List<Linguamon> = emptyList()
+)
+
+/** ระดับความยากของ Boss */
+enum class DifficultyTier(val label: String, val colorHex: Long) {
+    EASY("ง่าย", 0xFF10B981),
+    MEDIUM("ปานกลาง", 0xFFF59E0B),
+    HARD("ยาก", 0xFFEF4444)
+}
+
+/** ข้อมูล Boss Pokemon ที่เราจะสู้ด้วย */
+data class BossEnemy(
+    val pokemonId: Int,        // PokeAPI id
+    val name: String,
+    val tier: DifficultyTier,
+    val colorStart: Long,
+    val colorEnd: Long,
+    val hp: Int,               // HP สมมติแสดงใน UI
+    var imageUrl: String? = null
 )

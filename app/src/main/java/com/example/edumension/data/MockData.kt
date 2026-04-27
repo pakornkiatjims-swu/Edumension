@@ -84,8 +84,30 @@ object MockData {
         Question(60, "Jump",         "กระโดด",         listOf("นั่ง", "กระโดด", "คลาน", "ล้ม"),                         "กระโดด")
     )
 
-    /** จำนวนข้อต่อเกมหนึ่งรอบ */
+    /** จำนวนข้อต่อเกมหนึ่งรอบ (ปรับตาม difficulty) */
     const val QUESTIONS_PER_GAME = 10
+
+    // ── Boss Tier: EASY (Pikachu, Eevee, Jigglypuff) ───────────────────────
+    // ── Boss Tier: MEDIUM (Charizard, Blastoise, Arcanine) ─────────────────
+    // ── Boss Tier: HARD (Mewtwo, Dragonite, Tyranitar) ─────────────────────
+    val bosses = listOf(
+        BossEnemy(25,  "Pikachu",   DifficultyTier.EASY,   0xFFFDD835, 0xFFF9A825, 60),
+        BossEnemy(133, "Eevee",     DifficultyTier.EASY,   0xFFD7A96D, 0xFFB8860B, 60),
+        BossEnemy(39,  "Jigglypuff",DifficultyTier.EASY,   0xFFFF80AB, 0xFFFF4081, 60),
+        BossEnemy(6,   "Charizard", DifficultyTier.MEDIUM,  0xFFFF7043, 0xFFE64A19, 100),
+        BossEnemy(9,   "Blastoise", DifficultyTier.MEDIUM,  0xFF42A5F5, 0xFF1565C0, 100),
+        BossEnemy(59,  "Arcanine",  DifficultyTier.MEDIUM,  0xFFFF8A65, 0xFFBF360C, 100),
+        BossEnemy(150, "Mewtwo",    DifficultyTier.HARD,    0xFF9C27B0, 0xFF4A148C, 150),
+        BossEnemy(149, "Dragonite", DifficultyTier.HARD,    0xFFFFB74D, 0xFFEF6C00, 150),
+        BossEnemy(248, "Tyranitar", DifficultyTier.HARD,    0xFF546E7A, 0xFF263238, 150)
+    )
+
+    /** คำถาม EASY — เฉพาะหมวด Greetings, Family, Colors (id 1-7, 8-12, 34-39) */
+    val easyQuestions   get() = questions.filter { it.id in (1..12) + (34..39) }
+    /** คำถาม MEDIUM — หมวด Places, Food, Animals (id 13-33) */
+    val mediumQuestions get() = questions.filter { it.id in 13..33 }
+    /** คำถาม HARD — หมวด Numbers, Adjectives, Verbs (id 40-60) */
+    val hardQuestions   get() = questions.filter { it.id in 40..60 }
 
     val linguamons = listOf(
         Linguamon(1, "Flamee", "Fire", 0xFFFFA726, 0xFFF44336, 5, 450, "🔥", "A friendly fire spirit who loves warm words."),
@@ -102,3 +124,4 @@ object MockData {
         linguamonCollected = linguamons
     )
 }
+
