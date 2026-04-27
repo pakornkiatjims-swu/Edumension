@@ -56,11 +56,13 @@ class GameViewModel : ViewModel() {
         }
     }
 
-    private val allQuestions = MockData.questions.shuffled()
+    // สุ่มโจทย์ใหม่ทุกครั้งที่เริ่มเกม — เลือก QUESTIONS_PER_GAME ข้อจากคลังทั้งหมด
+    private var sessionQuestions: List<Question> = pickRandomQuestions()
+
     private val _currentQuestionIndex = MutableStateFlow(0)
     val currentQuestionIndex: StateFlow<Int> = _currentQuestionIndex.asStateFlow()
 
-    private val _currentQuestion = MutableStateFlow(allQuestions.first())
+    private val _currentQuestion = MutableStateFlow(sessionQuestions.first())
     val currentQuestion: StateFlow<Question> = _currentQuestion.asStateFlow()
 
     private val _currentScore = MutableStateFlow(0)
@@ -69,7 +71,11 @@ class GameViewModel : ViewModel() {
     private val _currentXP = MutableStateFlow(0)
     val currentXP: StateFlow<Int> = _currentXP.asStateFlow()
 
-    val totalQuestions = allQuestions.size
+    /** จำนวนข้อในรอบปัจจุบัน */
+    val totalQuestions: Int get() = sessionQuestions.size
+
+    private fun pickRandomQuestions(): List<Question> =
+        MockData.questions.shuffled().take(MockData.QUESTIONS_PER_GAME)
 
     fun submitAnswer(selectedIndex: Int): Boolean {
         val isCorrect = selectedIndex == currentQuestion.value.correctIndex
@@ -81,9 +87,9 @@ class GameViewModel : ViewModel() {
     }
 
     fun nextQuestion() {
-        if (_currentQuestionIndex.value < allQuestions.size - 1) {
+        if (_currentQuestionIndex.value < sessionQuestions.size - 1) {
             _currentQuestionIndex.update { it + 1 }
-            _currentQuestion.value = allQuestions[_currentQuestionIndex.value]
+            _currentQuestion.value = sessionQuestions[_currentQuestionIndex.value]
         }
     }
 
@@ -101,9 +107,11 @@ class GameViewModel : ViewModel() {
     }
 
     fun resetGame() {
+        // สุ่มชุดโจทย์ใหม่ทุกครั้ง
+        sessionQuestions = pickRandomQuestions()
         _currentQuestionIndex.value = 0
         _currentScore.value = 0
         _currentXP.value = 0
-        _currentQuestion.value = allQuestions.first()
+        _currentQuestion.value = sessionQuestions.first()
     }
 }
