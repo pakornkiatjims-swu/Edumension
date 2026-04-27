@@ -109,6 +109,31 @@ object MockData {
     /** คำถาม HARD — หมวด Numbers, Adjectives, Verbs (id 40-60) */
     val hardQuestions   get() = questions.filter { it.id in 40..60 }
 
+    // ── Catchable Pokemon Pool ───────────────────────────────────────────────
+    // EASY tier — สีสดใส, จับง่าย
+    val catchablePokemons = listOf(
+        CatchablePokemon(10,  "Caterpie",   DifficultyTier.EASY,   "Bug",     0xFF8BC34A, 0xFF558B2F),
+        CatchablePokemon(16,  "Pidgey",     DifficultyTier.EASY,   "Normal",  0xFFBCAAA4, 0xFF795548),
+        CatchablePokemon(19,  "Rattata",    DifficultyTier.EASY,   "Normal",  0xFF9575CD, 0xFF512DA8),
+        CatchablePokemon(25,  "Pikachu",    DifficultyTier.EASY,   "Electric",0xFFFDD835, 0xFFF9A825),
+        CatchablePokemon(39,  "Jigglypuff", DifficultyTier.EASY,   "Normal",  0xFFFF80AB, 0xFFFF4081),
+        CatchablePokemon(133, "Eevee",      DifficultyTier.EASY,   "Normal",  0xFFD7A96D, 0xFFB8860B),
+        // MEDIUM tier — ต้องใช้ทักษะมากขึ้น
+        CatchablePokemon(37,  "Vulpix",     DifficultyTier.MEDIUM,  "Fire",    0xFFFF7043, 0xFFBF360C),
+        CatchablePokemon(58,  "Growlithe",  DifficultyTier.MEDIUM,  "Fire",    0xFFFF8A65, 0xFFE64A19),
+        CatchablePokemon(54,  "Psyduck",    DifficultyTier.MEDIUM,  "Water",   0xFFFFF176, 0xFFF9A825),
+        CatchablePokemon(92,  "Gastly",     DifficultyTier.MEDIUM,  "Ghost",   0xFF9C27B0, 0xFF6A1B9A),
+        CatchablePokemon(79,  "Slowpoke",   DifficultyTier.MEDIUM,  "Psychic", 0xFFFF80AB, 0xFFAD1457),
+        CatchablePokemon(77,  "Ponyta",     DifficultyTier.MEDIUM,  "Fire",    0xFFFFEB3B, 0xFFFF6F00),
+        // HARD tier — หายากมาก
+        CatchablePokemon(131, "Lapras",     DifficultyTier.HARD,    "Water",   0xFF4FC3F7, 0xFF0277BD),
+        CatchablePokemon(143, "Snorlax",    DifficultyTier.HARD,    "Normal",  0xFF78909C, 0xFF263238),
+        CatchablePokemon(135, "Jolteon",    DifficultyTier.HARD,    "Electric",0xFFFFF176, 0xFFF57F17),
+        CatchablePokemon(136, "Flareon",    DifficultyTier.HARD,    "Fire",    0xFFFF7043, 0xFFBF360C),
+        CatchablePokemon(147, "Dratini",    DifficultyTier.HARD,    "Dragon",  0xFF90CAF9, 0xFF1565C0),
+        CatchablePokemon(150, "Mewtwo",     DifficultyTier.HARD,    "Psychic", 0xFF9C27B0, 0xFF4A148C)
+    )
+
     val linguamons = listOf(
         Linguamon(1, "Flamee", "Fire", 0xFFFFA726, 0xFFF44336, 5, 450, "🔥", "A friendly fire spirit who loves warm words."),
         Linguamon(2, "Bubblo", "Water", 0xFF42A5F5, 0xFF00BCD4, 3, 210, "💧", "Always calm and flows with the rhythm of language."),
@@ -121,7 +146,7 @@ object MockData {
         totalXP = 2540,
         wordsLearned = 128,
         totalScore = 15400,
-        linguamonCollected = linguamons
+        linguamonCollected = emptyList()   // เริ่มต้นว่างเปล่า — ได้จากการจับเท่านั้น
     )
 }
 

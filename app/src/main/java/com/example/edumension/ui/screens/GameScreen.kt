@@ -44,30 +44,33 @@ fun GameScreen(
     val score           by viewModel.currentScore.collectAsState()
     val boss            by viewModel.currentBoss.collectAsState()
     val bossHp          by viewModel.bossHp.collectAsState()
+    val pendingCatch    by viewModel.pendingCatch.collectAsState()
     val totalQuestions = viewModel.totalQuestions
     val bossMaxHp      = viewModel.bossMaxHp
 
     // null = ยังไม่ตอบ, true = ถูก, false = ผิด
     var feedback by remember { mutableStateOf<Boolean?>(null) }
+    // flag: ต้อง advance หลังมินิเกมเสร็จ
+    var pendingAdvance by remember { mutableStateOf(false) }
 
     // reset feedback เมื่อข้อเปลี่ยน
-    LaunchedEffect(currentIndex) { feedback = null }
+    LaunchedEffect(currentIndex) { feedback = null; pendingAdvance = false }
 
-    // auto-advance หลัง feedback
+    // เมื่อ mini-game เสร็จ (pendingCatch กลายเป็น null) และมี flag รอ → advance
+    LaunchedEffect(pendingCatch, pendingAdvance) {
+        if (pendingAdvance && pendingCatch == null) {
+            pendingAdvance = false
+            if (currentIndex < totalQuestions - 1) viewModel.nextQuestion()
+            else onGameFinished()
+        }
+    }
+
+    // auto-advance หลังตอบผิด (2วินาที)
     LaunchedEffect(feedback) {
-        when (feedback) {
-            true -> {
-                delay(1200)
-                if (currentIndex < totalQuestions - 1) viewModel.nextQuestion()
-                else onGameFinished()
-            }
-            false -> {
-                // รอให้ผู้ใช้อ่านเฉลย 2 วินาที แล้วข้ามเลย
-                delay(2000)
-                if (currentIndex < totalQuestions - 1) viewModel.nextQuestion()
-                else onGameFinished()
-            }
-            null -> Unit
+        if (feedback == false) {
+            delay(2000)
+            if (currentIndex < totalQuestions - 1) viewModel.nextQuestion()
+            else onGameFinished()
         }
     }
 
@@ -218,14 +221,31 @@ fun GameScreen(
                                 text = optionText,
                                 isCorrect = currentQuestion.correctIndex == globalIndex,
                                 feedback = feedback,
-                                onClick = { feedback = viewModel.submitAnswer(globalIndex) },
+                                onClick = {
+                                    val correct = viewModel.submitAnswer(globalIndex)
+                                    feedback = correct
+                                    if (correct) pendingAdvance = true  // รอ mini-game ก่อน advance
+                                },
                                 modifier = Modifier.weight(1f)
                             )
                         }
                     }
-                }
             }
         }
+    }
+
+    // ── Catch Mini-Game Dialog overlay ───────────────────────────────────────
+    if (pendingCatch != null) {
+        CatchMinigameScreen(
+            pokemon = pendingCatch!!,
+            onSuccess = {
+                viewModel.onCatchSuccess()
+                // pendingCatch จะเป็น null → LaunchedEffect จะตรวจสอบ pendingAdvance และ advance
+            },
+            onFail = {
+                viewModel.onCatchDismissed()
+            }
+        )
     }
 }
 

@@ -3,6 +3,7 @@ package com.example.edumension.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.edumension.data.BossEnemy
+import com.example.edumension.data.CatchablePokemon
 import com.example.edumension.data.DifficultyTier
 import com.example.edumension.data.Linguamon
 import com.example.edumension.data.MockData
@@ -25,13 +26,38 @@ class GameViewModel : ViewModel() {
     private val _currentBoss = MutableStateFlow(pickRandomBoss())
     val currentBoss: StateFlow<BossEnemy> = _currentBoss.asStateFlow()
 
-    /** HP เหลือของ boss (ลดทุกครั้งที่ตอบถูก) */
     private val _bossHp = MutableStateFlow(_currentBoss.value.hp)
     val bossHp: StateFlow<Int> = _bossHp.asStateFlow()
 
     val bossMaxHp: Int get() = _currentBoss.value.hp
 
     private fun pickRandomBoss(): BossEnemy = MockData.bosses.random()
+
+    // ── Catch Mini-Game ───────────────────────────────────────────────────────
+
+    /**
+     * เมื่อ != null → แสดง CatchMinigameScreen overlay
+     * ตั้งค่าเมื่อผู้ใช้ตอบถูก, reset หลัง dismiss
+     */
+    private val _pendingCatch = MutableStateFlow<CatchablePokemon?>(null)
+    val pendingCatch: StateFlow<CatchablePokemon?> = _pendingCatch.asStateFlow()
+
+    /** เรียกเมื่อจับ Pokemon สำเร็จ — เพิ่มเข้า Collection */
+    fun onCatchSuccess() {
+        val pokemon = _pendingCatch.value ?: return
+        val newLinguamon = pokemon.toLinguamon()
+        _playerStats.update { stats ->
+            // ไม่เพิ่มซ้ำถ้ามีอยู่แล้ว
+            if (stats.linguamonCollected.any { it.id == newLinguamon.id }) stats
+            else stats.copy(linguamonCollected = stats.linguamonCollected + newLinguamon)
+        }
+        _pendingCatch.value = null
+    }
+
+    /** เรียกเมื่อจับไม่สำเร็จหรือ timeout */
+    fun onCatchDismissed() {
+        _pendingCatch.value = null
+    }
 
     // ── Questions ─────────────────────────────────────────────────────────────
 
@@ -51,14 +77,12 @@ class GameViewModel : ViewModel() {
 
     val totalQuestions: Int get() = sessionQuestions.size
 
-    /** สุ่มคำถามจาก pool ที่ตรงกับ tier ของ boss */
     private fun pickQuestionsForBoss(boss: BossEnemy): List<Question> {
         val pool = when (boss.tier) {
             DifficultyTier.EASY   -> MockData.easyQuestions
             DifficultyTier.MEDIUM -> MockData.mediumQuestions
             DifficultyTier.HARD   -> MockData.hardQuestions
         }
-        // ถ้า pool ในระดับนั้นมีน้อยกว่า QUESTIONS_PER_GAME ก็ใช้ทั้งหมด
         return pool.shuffled().take(MockData.QUESTIONS_PER_GAME)
     }
 
@@ -74,39 +98,37 @@ class GameViewModel : ViewModel() {
             try {
                 val pokemonNames = listOf("bulbasaur", "charmander", "squirtle")
                 val colorsStart = listOf(0xFF66BB6A, 0xFFFFA726, 0xFF42A5F5)
-                val colorsEnd = listOf(0xFF10B981, 0xFFF44336, 0xFF00BCD4)
-                val icons = listOf("🍃", "🔥", "💧")
+                val colorsEnd   = listOf(0xFF10B981, 0xFFF44336, 0xFF00BCD4)
+                val icons       = listOf("🍃", "🔥", "💧")
 
-                val fetchedPokemons = pokemonNames.mapIndexed { index, name ->
-                    val response = RetrofitClient.instance.getPokemon(name)
+                val fetched = pokemonNames.mapIndexed { i, name ->
+                    val r = RetrofitClient.instance.getPokemon(name)
                     Linguamon(
-                        id = response.id,
-                        name = response.name.replaceFirstChar { it.uppercase() },
-                        type = response.types.firstOrNull()?.type?.name ?: "Unknown",
-                        colorStart = colorsStart[index],
-                        colorEnd = colorsEnd[index],
+                        id = r.id,
+                        name = r.name.replaceFirstChar { it.uppercase() },
+                        type = r.types.firstOrNull()?.type?.name ?: "Unknown",
+                        colorStart = colorsStart[i],
+                        colorEnd   = colorsEnd[i],
                         level = 5,
-                        xp = response.baseExperience,
-                        icon = icons[index],
-                        description = "A friendly ${response.types.firstOrNull()?.type?.name} type Pokemon.",
-                        imageUrl = response.sprites.other.officialArtwork.frontDefault
+                        xp    = r.baseExperience,
+                        icon  = icons[i],
+                        description = "A friendly ${r.types.firstOrNull()?.type?.name} type Pokemon.",
+                        imageUrl = r.sprites.other.officialArtwork.frontDefault
                     )
                 }
-
-                _playerStats.update { it.copy(linguamonCollected = fetchedPokemons) }
+                // เราไม่โหลด mock linguamon เข้า collection แล้ว — ใช้ที่ดึงมาสำหรับ reference เท่านั้น
+                // _playerStats.update { it.copy(linguamonCollected = fetched) }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
     }
 
-    /** ดึงรูป boss จาก PokeAPI และ update imageUrl */
     private fun fetchBossImage(boss: BossEnemy) {
         viewModelScope.launch {
             try {
-                val response = RetrofitClient.instance.getPokemon(boss.pokemonId.toString())
-                val imageUrl = response.sprites.other.officialArtwork.frontDefault
-                _currentBoss.update { it.copy(imageUrl = imageUrl) }
+                val r = RetrofitClient.instance.getPokemon(boss.pokemonId.toString())
+                _currentBoss.update { it.copy(imageUrl = r.sprites.other.officialArtwork.frontDefault) }
                 _bossHp.value = boss.hp
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -118,16 +140,19 @@ class GameViewModel : ViewModel() {
 
     /**
      * ส่งคำตอบ → คืน true/false
-     * หากถูก: +score +xp และ damage boss HP
+     * ถูก: +score, +xp, damage boss, สุ่ม Pokemon ให้จับ
      */
     fun submitAnswer(selectedIndex: Int): Boolean {
         val isCorrect = selectedIndex == currentQuestion.value.correctIndex
         if (isCorrect) {
             _currentScore.update { it + 10 }
             _currentXP.update { it + 20 }
-            // ลด HP boss ต่อคำถาม = bossMaxHp / totalQuestions (rounded)
             val dmg = (_currentBoss.value.hp.toFloat() / totalQuestions).toInt().coerceAtLeast(1)
             _bossHp.update { (it - dmg).coerceAtLeast(0) }
+
+            // สุ่ม Pokemon จาก pool ตาม tier ของ boss
+            val tierPool = MockData.catchablePokemons.filter { it.tier == _currentBoss.value.tier }
+            _pendingCatch.value = tierPool.randomOrNull()
         }
         return isCorrect
     }
@@ -139,30 +164,26 @@ class GameViewModel : ViewModel() {
         }
     }
 
-    fun skipQuestion() {
-        nextQuestion()
-    }
+    fun skipQuestion() = nextQuestion()
 
     fun finishGame() {
         _playerStats.update {
             it.copy(
                 totalScore = it.totalScore + _currentScore.value,
-                totalXP = it.totalXP + _currentXP.value
+                totalXP    = it.totalXP + _currentXP.value
             )
         }
     }
 
     fun resetGame() {
-        // สุ่ม boss ใหม่และดึงรูปใหม่
         val newBoss = pickRandomBoss()
         _currentBoss.value = newBoss
         fetchBossImage(newBoss)
-
-        // สุ่มชุดโจทย์ตาม boss tier ใหม่
         sessionQuestions = pickQuestionsForBoss(newBoss)
         _currentQuestionIndex.value = 0
         _currentScore.value = 0
         _currentXP.value = 0
         _currentQuestion.value = sessionQuestions.first()
+        _pendingCatch.value = null
     }
 }
