@@ -1,18 +1,60 @@
 package com.example.edumension.ui
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.edumension.data.Linguamon
 import com.example.edumension.data.MockData
 import com.example.edumension.data.PlayerStats
 import com.example.edumension.data.Question
+import com.example.edumension.data.remote.RetrofitClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class GameViewModel : ViewModel() {
 
     private val _playerStats = MutableStateFlow(MockData.initialPlayerStats)
     val playerStats: StateFlow<PlayerStats> = _playerStats.asStateFlow()
+
+    init {
+        fetchPokemonData()
+    }
+
+    private fun fetchPokemonData() {
+        viewModelScope.launch {
+            try {
+                val pokemonNames = listOf("bulbasaur", "charmander", "squirtle")
+                val colorsStart = listOf(0xFF66BB6A, 0xFFFFA726, 0xFF42A5F5)
+                val colorsEnd = listOf(0xFF10B981, 0xFFF44336, 0xFF00BCD4)
+                val icons = listOf("🍃", "🔥", "💧")
+                
+                val fetchedPokemons = pokemonNames.mapIndexed { index, name ->
+                    val response = RetrofitClient.instance.getPokemon(name)
+                    Linguamon(
+                        id = response.id,
+                        name = response.name.replaceFirstChar { it.uppercase() },
+                        type = response.types.firstOrNull()?.type?.name ?: "Unknown",
+                        colorStart = colorsStart[index],
+                        colorEnd = colorsEnd[index],
+                        level = 5,
+                        xp = response.baseExperience,
+                        icon = icons[index],
+                        description = "A friendly ${response.types.firstOrNull()?.type?.name} type Pokemon.",
+                        imageUrl = response.sprites.other.officialArtwork.frontDefault
+                    )
+                }
+                
+                _playerStats.update {
+                    it.copy(linguamonCollected = fetchedPokemons)
+                }
+            } catch (e: Exception) {
+                // Keep the initial mock data on error
+                e.printStackTrace()
+            }
+        }
+    }
 
     private val allQuestions = MockData.questions.shuffled()
     private val _currentQuestionIndex = MutableStateFlow(0)

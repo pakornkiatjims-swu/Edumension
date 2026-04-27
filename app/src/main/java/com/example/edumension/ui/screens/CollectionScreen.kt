@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.edumension.data.Linguamon
 import com.example.edumension.ui.GameViewModel
 import com.example.edumension.ui.theme.*
@@ -114,7 +115,15 @@ fun LinguamonListItem(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = linguamon.icon, fontSize = 48.sp)
+                if (linguamon.imageUrl != null) {
+                    AsyncImage(
+                        model = linguamon.imageUrl,
+                        contentDescription = linguamon.name,
+                        modifier = Modifier.size(80.dp)
+                    )
+                } else {
+                    Text(text = linguamon.icon, fontSize = 48.sp)
+                }
             }
 
             Spacer(modifier = Modifier.width(16.dp))

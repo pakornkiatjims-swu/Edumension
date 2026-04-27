@@ -22,10 +22,9 @@ data class Linguamon(
     val level: Int,
     val xp: Int,
     val icon: String,
-    val description: String
-) {
-    val imageUrl get() = ""
-}
+    val description: String,
+    val imageUrl: String? = null
+)
 
 data class PlayerStats(
     val name: String = "Player 1",
