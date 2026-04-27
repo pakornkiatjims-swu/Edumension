@@ -224,15 +224,17 @@ fun GameScreen(
                                 onClick = {
                                     val correct = viewModel.submitAnswer(globalIndex)
                                     feedback = correct
-                                    if (correct) pendingAdvance = true  // รอ mini-game ก่อน advance
+                                    if (correct) pendingAdvance = true
                                 },
                                 modifier = Modifier.weight(1f)
                             )
                         }
                     }
+                }
             }
-        }
-    }
+        }   // end inner Column
+    }   // end outer Column (screen root)
+
 
     // ── Catch Mini-Game Dialog overlay ───────────────────────────────────────
     if (pendingCatch != null) {
