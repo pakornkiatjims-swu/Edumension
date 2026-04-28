@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.edumension.ui.GameViewModel
+import com.example.edumension.ui.screens.CatchPhaseScreen
 import com.example.edumension.ui.screens.CollectionScreen
 import com.example.edumension.ui.screens.GameScreen
 import com.example.edumension.ui.screens.HomeScreen
@@ -20,9 +21,9 @@ fun AppNavigation() {
     NavHost(navController = navController, startDestination = "home") {
         composable("home") {
             HomeScreen(
-                onStartGame = { 
+                onStartGame = {
                     gameViewModel.resetGame()
-                    navController.navigate("game") 
+                    navController.navigate("game")
                 },
                 onViewCollection = { navController.navigate("collection") },
                 onViewStats = { navController.navigate("stats") }
@@ -31,8 +32,27 @@ fun AppNavigation() {
         composable("game") {
             GameScreen(
                 viewModel = gameViewModel,
-                onGameFinished = {
+                onGameFinished = { allCorrect ->
                     gameViewModel.finishGame()
+                    if (allCorrect) {
+                        // ตอบถูกหมด → ไปจับ Boss
+                        gameViewModel.startCatchPhase()
+                        navController.navigate("catch_phase") {
+                            popUpTo("home") { inclusive = false }
+                        }
+                    } else {
+                        // ตอบผิดบางข้อ → ไป Result ตรง
+                        navController.navigate("result") {
+                            popUpTo("home") { inclusive = false }
+                        }
+                    }
+                }
+            )
+        }
+        composable("catch_phase") {
+            CatchPhaseScreen(
+                viewModel = gameViewModel,
+                onDone = {
                     navController.navigate("result") {
                         popUpTo("home") { inclusive = false }
                     }

@@ -7,7 +7,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,40 +36,31 @@ import kotlinx.coroutines.delay
 @Composable
 fun GameScreen(
     viewModel: GameViewModel,
-    onGameFinished: () -> Unit
+    onGameFinished: (allCorrect: Boolean) -> Unit
 ) {
     val currentQuestion by viewModel.currentQuestion.collectAsState()
     val currentIndex    by viewModel.currentQuestionIndex.collectAsState()
     val score           by viewModel.currentScore.collectAsState()
     val boss            by viewModel.currentBoss.collectAsState()
     val bossHp          by viewModel.bossHp.collectAsState()
-    val pendingCatch    by viewModel.pendingCatch.collectAsState()
     val totalQuestions = viewModel.totalQuestions
     val bossMaxHp      = viewModel.bossMaxHp
 
     // null = ยังไม่ตอบ, true = ถูก, false = ผิด
     var feedback by remember { mutableStateOf<Boolean?>(null) }
-    // flag: ต้อง advance หลังมินิเกมเสร็จ
-    var pendingAdvance by remember { mutableStateOf(false) }
 
     // reset feedback เมื่อข้อเปลี่ยน
-    LaunchedEffect(currentIndex) { feedback = null; pendingAdvance = false }
+    LaunchedEffect(currentIndex) { feedback = null }
 
-    // เมื่อ mini-game เสร็จ (pendingCatch กลายเป็น null) และมี flag รอ → advance
-    LaunchedEffect(pendingCatch, pendingAdvance) {
-        if (pendingAdvance && pendingCatch == null) {
-            pendingAdvance = false
-            if (currentIndex < totalQuestions - 1) viewModel.nextQuestion()
-            else onGameFinished()
-        }
-    }
-
-    // auto-advance หลังตอบผิด (2วินาที)
+    // auto-advance หลังตอบ (ทั้งถูกและผิด)
     LaunchedEffect(feedback) {
-        if (feedback == false) {
-            delay(2000)
-            if (currentIndex < totalQuestions - 1) viewModel.nextQuestion()
-            else onGameFinished()
+        if (feedback != null) {
+            delay(1800)
+            if (currentIndex < totalQuestions - 1) {
+                viewModel.nextQuestion()
+            } else {
+                onGameFinished(viewModel.allCorrect)
+            }
         }
     }
 
@@ -88,7 +78,7 @@ fun GameScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
-                onClick = { onGameFinished() },
+                onClick = { onGameFinished(false) },
                 modifier = Modifier.size(40.dp).background(Indigo50, CircleShape)
             ) {
                 Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Indigo600)
@@ -160,7 +150,7 @@ fun GameScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ── Answer Feedback Banner (เฉลยเมื่อผิด) ───────────────────────
+            // ── Answer Feedback Banner (ผิด) ─────────────────────────────────
             AnimatedVisibility(
                 visible = feedback == false,
                 enter = fadeIn(tween(200)),
@@ -215,16 +205,14 @@ fun GameScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        rowOptions.forEachIndexed { colIndex, optionText ->
+                        rowOptions.forEach { optionText ->
                             val globalIndex = currentQuestion.options.indexOf(optionText)
                             OptionButton(
                                 text = optionText,
                                 isCorrect = currentQuestion.correctIndex == globalIndex,
                                 feedback = feedback,
                                 onClick = {
-                                    val correct = viewModel.submitAnswer(globalIndex)
-                                    feedback = correct
-                                    if (correct) pendingAdvance = true
+                                    feedback = viewModel.submitAnswer(globalIndex)
                                 },
                                 modifier = Modifier.weight(1f)
                             )
@@ -234,21 +222,6 @@ fun GameScreen(
             }
         }   // end inner Column
     }   // end outer Column (screen root)
-
-
-    // ── Catch Mini-Game Dialog overlay ───────────────────────────────────────
-    if (pendingCatch != null) {
-        CatchMinigameScreen(
-            pokemon = pendingCatch!!,
-            onSuccess = {
-                viewModel.onCatchSuccess()
-                // pendingCatch จะเป็น null → LaunchedEffect จะตรวจสอบ pendingAdvance และ advance
-            },
-            onFail = {
-                viewModel.onCatchDismissed()
-            }
-        )
-    }
 }
 
 @Composable
@@ -279,15 +252,11 @@ fun BossCard(boss: BossEnemy, bossHp: Int, bossMaxHp: Int, isHurt: Boolean) {
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                if (boss.imageUrl != null) {
-                    AsyncImage(
-                        model = boss.imageUrl,
-                        contentDescription = boss.name,
-                        modifier = Modifier.size(90.dp)
-                    )
-                } else {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(36.dp))
-                }
+                AsyncImage(
+                    model = boss.imageUrl,
+                    contentDescription = boss.name,
+                    modifier = Modifier.size(90.dp)
+                )
                 // hurt flash overlay
                 if (isHurt) {
                     Box(

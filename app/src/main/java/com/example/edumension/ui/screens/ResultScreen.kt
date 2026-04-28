@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CatchingPokemon
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -13,12 +14,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.example.edumension.ui.CatchResult
 import com.example.edumension.ui.GameViewModel
 import com.example.edumension.ui.theme.*
 
@@ -30,6 +33,10 @@ fun ResultScreen(
 ) {
     val score by viewModel.currentScore.collectAsState()
     val xp by viewModel.currentXP.collectAsState()
+    val correctCount by viewModel.correctCount.collectAsState()
+    val boss by viewModel.currentBoss.collectAsState()
+    val catchResult by viewModel.catchResult.collectAsState()
+    val totalQuestions = viewModel.totalQuestions
 
     Box(
         modifier = Modifier
@@ -69,7 +76,7 @@ fun ResultScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     // Trophy Icon
                     Box(
                         modifier = Modifier
@@ -84,18 +91,75 @@ fun ResultScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "ยอดเยี่ยมมาก!",
+                        text = if (correctCount == totalQuestions) "ยอดเยี่ยมมาก!" else "เก่งมาก!",
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Black,
                         color = Indigo900
                     )
-                    
+
                     Text(
-                        text = "คุณเรียนรู้คำศัพท์ใหม่ได้สำเร็จ",
+                        text = "ตอบถูก $correctCount / $totalQuestions ข้อ",
                         fontSize = 16.sp,
                         color = Indigo500,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
+                        modifier = Modifier.padding(top = 8.dp)
                     )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // ── Catch Result ──────────────────────────────────────────
+                    if (catchResult != CatchResult.NONE) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (catchResult == CatchResult.SUCCESS) Green50 else Red50
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .background(
+                                            Brush.radialGradient(
+                                                listOf(Color(boss.colorStart), Color(boss.colorEnd))
+                                            ),
+                                            RoundedCornerShape(12.dp)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    AsyncImage(
+                                        model = boss.imageUrl,
+                                        contentDescription = boss.name,
+                                        modifier = Modifier.size(48.dp)
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        if (catchResult == CatchResult.SUCCESS) "🎉 จับ ${boss.name} ได้!"
+                                        else "💨 ${boss.name} หนีไป",
+                                        fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                                        color = if (catchResult == CatchResult.SUCCESS) Green700 else Red600
+                                    )
+                                    Text(
+                                        "${boss.tier.label} • ${boss.type} Type",
+                                        fontSize = 11.sp, color = Slate400
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    } else if (correctCount < totalQuestions) {
+                        Text(
+                            "ตอบถูกทุกข้อเพื่อจับ ${boss.name}!",
+                            fontSize = 13.sp, color = Slate400,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
 
                     // Score and XP Grid
                     Row(
@@ -117,13 +181,13 @@ fun ResultScreen(
                         Column(
                             modifier = Modifier
                                 .weight(1f)
-                                .background(Color(0xFFFAF5FF), RoundedCornerShape(16.dp)) // Purple50 equivalent
-                                .border(1.dp, Color(0xFFF3E8FF), RoundedCornerShape(16.dp)) // Purple100
+                                .background(Color(0xFFFAF5FF), RoundedCornerShape(16.dp))
+                                .border(1.dp, Color(0xFFF3E8FF), RoundedCornerShape(16.dp))
                                 .padding(16.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text("XP GAINED", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Purple400) // need Purple400 defined or just hardcode
-                            Text("+$xp", fontSize = 24.sp, fontWeight = FontWeight.Black, color = Purple900) // Purple900
+                            Text("XP GAINED", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Purple400)
+                            Text("+$xp", fontSize = 24.sp, fontWeight = FontWeight.Black, color = Purple900)
                         }
                     }
 
@@ -161,5 +225,6 @@ fun ResultScreen(
     }
 }
 
+val Green50 = Color(0xFFF0FDF4)
 val Purple400 = Color(0xFFC084FC)
 val Purple900 = Color(0xFF581C87)

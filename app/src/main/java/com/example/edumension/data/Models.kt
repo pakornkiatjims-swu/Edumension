@@ -34,48 +34,55 @@ data class PlayerStats(
     val linguamonCollected: List<Linguamon> = emptyList()
 )
 
-/** ระดับความยากของ Boss */
-enum class DifficultyTier(val label: String, val colorHex: Long) {
-    EASY("ง่าย", 0xFF10B981),
-    MEDIUM("ปานกลาง", 0xFFF59E0B),
-    HARD("ยาก", 0xFFEF4444)
+/** ระดับ Rarity ของ Boss — กำหนดจำนวนรอบมินิเกมที่ต้องผ่านติดต่อกัน */
+enum class DifficultyTier(
+    val label: String,
+    val colorHex: Long,
+    val catchRounds: Int,
+    val questionsPerGame: Int
+) {
+    COMMON("Common",    0xFF10B981, 1, 5),
+    RARE("Rare",        0xFF3B82F6, 2, 6),
+    EPIC("Epic",        0xFF8B5CF6, 3, 7),
+    LEGENDARY("Legendary", 0xFFF59E0B, 4, 8),
+    MYTHIC("Mythic",    0xFFEF4444, 5, 10)
 }
 
-/** ข้อมูล Boss Pokemon ที่เราจะสู้ด้วย */
+/** ข้อมูล Boss Pokemon ที่เราจะสู้ด้วย — จับได้เมื่อตอบถูกหมด + ผ่านมินิเกม */
 data class BossEnemy(
     val pokemonId: Int,
     val name: String,
     val tier: DifficultyTier,
-    val colorStart: Long,
-    val colorEnd: Long,
-    val hp: Int,
-    var imageUrl: String? = null
-)
-
-/**
- * Pokemon ที่ผู้ใช้มีสิทธิ์จับได้จากการตอบถูก
- * imageUrl ดึงจาก PokeAPI CDN โดยตรง — ไม่ต้อง API call เพิ่ม
- */
-data class CatchablePokemon(
-    val id: Int,
-    val name: String,
-    val tier: DifficultyTier,
     val type: String,
     val colorStart: Long,
-    val colorEnd: Long
+    val colorEnd: Long,
+    val hp: Int
 ) {
+    /** CDN URL — ไม่ต้อง API call, Coil จะ lazy-load เอง */
     val imageUrl: String
-        get() = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/other/official-artwork/$id.png"
+        get() = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/$pokemonId.png"
 
     /** แปลงเป็น Linguamon เพื่อเก็บใน Collection */
     fun toLinguamon(): Linguamon = Linguamon(
-        id = id,
+        id = pokemonId,
         name = name,
         type = type,
         colorStart = colorStart,
         colorEnd = colorEnd,
-        level = when (tier) { DifficultyTier.EASY -> 5; DifficultyTier.MEDIUM -> 15; DifficultyTier.HARD -> 30 },
-        xp = when (tier) { DifficultyTier.EASY -> 100; DifficultyTier.MEDIUM -> 400; DifficultyTier.HARD -> 1000 },
+        level = when (tier) {
+            DifficultyTier.COMMON -> 5
+            DifficultyTier.RARE -> 15
+            DifficultyTier.EPIC -> 30
+            DifficultyTier.LEGENDARY -> 50
+            DifficultyTier.MYTHIC -> 80
+        },
+        xp = when (tier) {
+            DifficultyTier.COMMON -> 100
+            DifficultyTier.RARE -> 400
+            DifficultyTier.EPIC -> 1000
+            DifficultyTier.LEGENDARY -> 2500
+            DifficultyTier.MYTHIC -> 5000
+        },
         icon = "⭐",
         description = "A $type type Pokemon of ${tier.label} rarity.",
         imageUrl = imageUrl
