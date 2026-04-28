@@ -31,11 +31,11 @@
 
 | Tier | สี | รอบ Catch | จำนวนคำถาม |
 |---|---|---|---|
-| Common | 🟢 Green | 1 | 5 |
-| Rare | 🔵 Blue | 2 | 6 |
-| Epic | 🟣 Purple | 3 | 7 |
-| Legendary | 🟡 Yellow | 4 | 8 |
-| Mythic | 🔴 Red | 5 | 10 |
+| Common | 🟢 | 3 | 5 |
+| Rare | 🔵 | 3 | 6 |
+| Epic | 🟣 | 3 | 7 |
+| Legendary | 🟡 | 3 | 8 |
+| Mythic | 🔴 | 3 | 10 |
 
 ---
 
