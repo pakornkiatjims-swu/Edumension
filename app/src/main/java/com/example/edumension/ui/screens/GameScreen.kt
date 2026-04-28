@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.edumension.data.BossEnemy
 import com.example.edumension.data.DifficultyTier
+import com.example.edumension.ui.GameMode
 import com.example.edumension.ui.GameViewModel
 import com.example.edumension.ui.theme.*
 import kotlinx.coroutines.delay
@@ -45,6 +46,9 @@ fun GameScreen(
     val bossHp          by viewModel.bossHp.collectAsState()
     val totalQuestions = viewModel.totalQuestions
     val bossMaxHp      = viewModel.bossMaxHp
+    val gameMode        by viewModel.gameMode.collectAsState()
+    val trainTarget     by viewModel.trainTarget.collectAsState()
+    val isTraining      = gameMode == GameMode.TRAINING
 
     // null = ยังไม่ตอบ, true = ถูก, false = ผิด
     var feedback by remember { mutableStateOf<Boolean?>(null) }
@@ -59,7 +63,9 @@ fun GameScreen(
             if (currentIndex < totalQuestions - 1) {
                 viewModel.nextQuestion()
             } else {
-                onGameFinished(viewModel.allCorrect)
+                // Training → always go to result (no catch phase needed)
+                val shouldCatch = !isTraining && viewModel.allCorrect
+                onGameFinished(shouldCatch)
             }
         }
     }
@@ -101,17 +107,24 @@ fun GameScreen(
                 )
             }
 
-            // Score badge
-            Row(
-                modifier = Modifier
-                    .background(Amber100, RoundedCornerShape(16.dp))
-                    .border(1.dp, Amber200, RoundedCornerShape(16.dp))
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Icon(Icons.Filled.Star, contentDescription = null, tint = Amber500, modifier = Modifier.size(15.dp))
-                Text(score.toString(), fontWeight = FontWeight.Bold, color = Amber700, fontSize = 14.sp)
+            // Training badge OR score badge
+            if (isTraining) {
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("🏋️ ฝึกฝน", fontSize = 11.sp, fontWeight = FontWeight.Black, color = Indigo600)
+                    Text(trainTarget?.name ?: "", fontSize = 11.sp, color = Slate400)
+                }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .background(Amber100, RoundedCornerShape(16.dp))
+                        .border(1.dp, Amber200, RoundedCornerShape(16.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(Icons.Filled.Star, contentDescription = null, tint = Amber500, modifier = Modifier.size(15.dp))
+                    Text(score.toString(), fontWeight = FontWeight.Bold, color = Amber700, fontSize = 14.sp)
+                }
             }
         }
 
@@ -119,8 +132,39 @@ fun GameScreen(
             modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // ── Boss Card ───────────────────────────────────────────────────
-            BossCard(boss = boss, bossHp = bossHp, bossMaxHp = bossMaxHp, isHurt = feedback == true)
+            // ── Boss Card (Boss mode only) ───────────────────────────────
+            if (!isTraining) {
+                BossCard(boss = boss, bossHp = bossHp, bossMaxHp = bossMaxHp, isHurt = feedback == true)
+            } else {
+                // Training banner
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Indigo600),
+                    elevation = CardDefaults.cardElevation(6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        if (trainTarget?.imageUrl != null) {
+                            AsyncImage(
+                                model = trainTarget!!.imageUrl,
+                                contentDescription = null,
+                                modifier = Modifier.size(72.dp)
+                            )
+                        } else {
+                            Text(trainTarget?.icon ?: "⭐", fontSize = 48.sp)
+                        }
+                        Column {
+                            Text("กำลังฝึกฝน", fontSize = 11.sp, color = Color.White.copy(alpha = 0.7f), fontWeight = FontWeight.Medium)
+                            Text(trainTarget?.name ?: "", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color.White)
+                            Text("+50 XP ต่อข้อที่ตอบถูก", fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
+                        }
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 

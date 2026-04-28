@@ -25,25 +25,56 @@ import com.example.edumension.data.Linguamon
 import com.example.edumension.ui.GameViewModel
 import com.example.edumension.ui.theme.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CollectionScreen(
     viewModel: GameViewModel,
-    onBackHome: () -> Unit
+    onBackHome: () -> Unit,
+    onStartTraining: () -> Unit
 ) {
     val stats by viewModel.playerStats.collectAsState()
     var selectedLinguamon by remember { mutableStateOf<Linguamon?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Show Bottom Sheet when something is selected
+    if (selectedLinguamon != null) {
+        ModalBottomSheet(
+            onDismissRequest = { selectedLinguamon = null },
+            sheetState = sheetState,
+            containerColor = Color.Transparent,
+            dragHandle = null
+        ) {
+            LinguamonDetailSheet(
+                linguamon = selectedLinguamon!!,
+                onDismiss = { selectedLinguamon = null },
+                onTrain = { linguamon ->
+                    selectedLinguamon = null
+                    viewModel.startTraining(linguamon)
+                    onStartTraining()
+                },
+                onEvolve = { linguamon ->
+                    viewModel.evolveLinguamon(linguamon.id)
+                    selectedLinguamon = null
+                },
+                onRelease = { linguamon ->
+                    viewModel.releaseLinguamon(linguamon.id)
+                    selectedLinguamon = null
+                }
+            )
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Slate50)
     ) {
-        // Header
+        // ── Header ──────────────────────────────────────────────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.White)
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
@@ -54,27 +85,67 @@ fun CollectionScreen(
             ) {
                 Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Indigo600)
             }
-            Text(
-                text = "คอลเลกชัน",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Black,
-                color = Indigo900,
-                modifier = Modifier.padding(start = 16.dp)
-            )
+            Column(modifier = Modifier.padding(start = 16.dp)) {
+                Text(
+                    "คอลเลกชัน",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Indigo900
+                )
+                Text(
+                    "${stats.linguamonCollected.size} ตัว",
+                    fontSize = 13.sp,
+                    color = Slate400,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
 
-        // List
-        LazyColumn(
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(stats.linguamonCollected) { linguamon ->
-                LinguamonListItem(
-                    linguamon = linguamon,
-                    isSelected = selectedLinguamon?.id == linguamon.id,
-                    onClick = { selectedLinguamon = linguamon }
-                )
+        // ── Empty State ──────────────────────────────────────────────────────
+        if (stats.linguamonCollected.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text("📦", fontSize = 64.sp)
+                    Text(
+                        "ยังไม่มี Linguamon",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Slate500
+                    )
+                    Text(
+                        "ไปเล่นเกมเพื่อจับ Linguamon ใหม่!",
+                        fontSize = 14.sp,
+                        color = Slate400
+                    )
+                    Button(
+                        onClick = onBackHome,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Indigo600)
+                    ) {
+                        Text("ไปเล่นเกม")
+                    }
+                }
+            }
+        } else {
+            // ── List ─────────────────────────────────────────────────────────
+            LazyColumn(
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(stats.linguamonCollected, key = { it.id }) { linguamon ->
+                    LinguamonListItem(
+                        linguamon = linguamon,
+                        isSelected = selectedLinguamon?.id == linguamon.id,
+                        onClick = { selectedLinguamon = linguamon }
+                    )
+                }
             }
         }
     }
@@ -165,12 +236,18 @@ fun LinguamonListItem(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Lv. ${linguamon.level}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Slate400)
-                    Text("${linguamon.xp} XP", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Slate400)
+                    Text(
+                        "Lv. ${linguamon.level}",
+                        fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Slate400
+                    )
+                    Text(
+                        "${linguamon.xp % 1000} / 1000 XP",
+                        fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Slate400
+                    )
                 }
 
                 LinearProgressIndicator(
-                    progress = { (linguamon.xp % 1000).toFloat() / 1000f },
+                    progress = { (linguamon.xp % 1000) / 1000f },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 4.dp)

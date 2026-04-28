@@ -12,6 +12,7 @@ import com.example.edumension.ui.screens.GameScreen
 import com.example.edumension.ui.screens.HomeScreen
 import com.example.edumension.ui.screens.ResultScreen
 import com.example.edumension.ui.screens.StatsScreen
+import com.example.edumension.ui.screens.TrainingResultScreen
 
 @Composable
 fun AppNavigation() {
@@ -32,17 +33,19 @@ fun AppNavigation() {
         composable("game") {
             GameScreen(
                 viewModel = gameViewModel,
-                onGameFinished = { allCorrect ->
+                onGameFinished = { shouldCatch ->
                     gameViewModel.finishGame()
-                    if (allCorrect) {
-                        // ตอบถูกหมด → ไปจับ Boss
+                    if (shouldCatch) {
+                        // Boss mode + ตอบถูกหมด → Catch Phase
                         gameViewModel.startCatchPhase()
                         navController.navigate("catch_phase") {
                             popUpTo("home") { inclusive = false }
                         }
                     } else {
-                        // ตอบผิดบางข้อ → ไป Result ตรง
-                        navController.navigate("result") {
+                        // Boss mode ผิดบางข้อ OR Training mode → Result
+                        val destination = if (gameViewModel.gameMode.value.name == "TRAINING")
+                            "training_result" else "result"
+                        navController.navigate(destination) {
                             popUpTo("home") { inclusive = false }
                         }
                     }
@@ -73,6 +76,14 @@ fun AppNavigation() {
                 }
             )
         }
+        composable("training_result") {
+            TrainingResultScreen(
+                viewModel = gameViewModel,
+                onDone = {
+                    navController.popBackStack("home", inclusive = false)
+                }
+            )
+        }
         composable("stats") {
             StatsScreen(
                 viewModel = gameViewModel,
@@ -82,7 +93,12 @@ fun AppNavigation() {
         composable("collection") {
             CollectionScreen(
                 viewModel = gameViewModel,
-                onBackHome = { navController.popBackStack() }
+                onBackHome = { navController.popBackStack() },
+                onStartTraining = {
+                    navController.navigate("game") {
+                        popUpTo("collection") { inclusive = false }
+                    }
+                }
             )
         }
     }
